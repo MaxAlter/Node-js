@@ -8,10 +8,10 @@ const argv = yargs
   .string("name")
   .string("phone").argv;
 
-async function invokeAction({ action, id, name, email, phone }) {
+function invokeAction({ action, id, name, email, phone }) {
   switch (action) {
     case "list":
-      await contacts.listContacts();
+      contacts.listContacts();
       break;
 
     case "get":
