@@ -8,22 +8,22 @@ const argv = yargs
   .string("name")
   .string("phone").argv;
 
- function invokeAction({ action, id, name, email, phone }) {
+async function invokeAction({ action, id, name, email, phone }) {
   switch (action) {
     case "list":
-       console.table(contacts.listContacts());
+      await contacts.listContacts();
       break;
 
     case "get":
-      contacts.getContactById(id);
+      await contacts.getContactById(id);
       break;
 
     case "add":
-      contacts.addContact(name, email, phone);
+      await contacts.addContact(name, email, phone);
       break;
 
     case "remove":
-      contacts.removeContact(id);
+      await contacts.removeContact(id);
       break;
 
     default:
@@ -31,7 +31,9 @@ const argv = yargs
   }
 }
 
-invokeAction(argv);
+(async () => {
+  await invokeAction(argv);
+})();
 
 // # Получаем и выводим весь список контакстов в виде таблицы (console.table)
 // node index.js --action="list"
