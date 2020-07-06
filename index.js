@@ -1,34 +1,40 @@
-const yargs = require("yargs");
-const contacts = require("./contacts");
+const Server = require("./Server");
 
-const argv = yargs
-  .number("id")
-  .string("action")
-  .string("email")
-  .string("name")
-  .string("phone").argv;
+Server.start();
 
-function invokeAction({ action, id, name, email, phone }) {
-  switch (action) {
-    case "list":
-      contacts.listContacts();
-      break;
+// const yargs = require("yargs");
+// const contacts = require("./contacts");
 
-    case "get":
-      contacts.getContactById(id);
-      break;
+// const argv = yargs
+//   .number("id")
+//   .string("action")
+//   .string("email")
+//   .string("name")
+//   .string("phone").argv;
 
-    case "add":
-      contacts.addContact(name, email, phone);
-      break;
+// async function invokeAction({ action, id, name, email, phone }) {
+//   switch (action) {
+//     case "list":
+//       await contacts.listContacts();
+//       break;
 
-    case "remove":
-      contacts.removeContact(id);
-      break;
+//     case "get":
+//       await contacts.getContactById(id);
+//       break;
 
-    default:
-      console.warn("\x1B[31m Unknown action type!");
-  }
-}
+//     case "add":
+//       await contacts.addContact(name, email, phone);
+//       break;
 
-invokeAction(argv);
+//     case "remove":
+//       await contacts.removeContact(id);
+//       break;
+
+//     default:
+//       console.warn("\x1B[31m Unknown action type!");
+//   }
+// }
+
+// (async () => {
+//   await invokeAction(argv);
+// })();
