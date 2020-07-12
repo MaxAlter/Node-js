@@ -1,34 +1,35 @@
 const Joi = require("@hapi/joi");
-
+const {
+  Types: { ObjectId },
+} = require("mongoose");
 const contactsModel = require("../Model/ContactsModel");
 
 class ContactsController {
+  //работатет получение всех контактов
   getAllContacts = async (req, res, next) => {
     try {
-      const contacts = await contactsModel.listContacts();
+      const contacts = await contactsModel.find();
 
       return res.status(200).json(contacts);
     } catch (err) {
       return this.errorHandler(res, err);
     }
   };
-
+  // работатет добавление контакта
   createNewContact = async (req, res, next) => {
     try {
-      const newContact = await contactsModel.addContact(req.body);
+      const newContact = await contactsModel.create(req.body);
 
       return res.status(201).json(newContact);
     } catch (err) {
       return this.errorHandler(res, err);
     }
   };
-
+  // получения контакта по id работатет
   getContactsById = async (req, res, next) => {
     try {
       const { id } = req.params;
-      // const id = parseInt(req.params.id)
-
-      const targetContact = await contactsModel.getContactById(id);
+      const targetContact = await contactsModel.findById(id);
 
       if (!targetContact) {
         return res.status(404).json({ message: "Not Found" });
@@ -42,23 +43,32 @@ class ContactsController {
 
   updateContact = async (req, res, next) => {
     try {
-      const updatedContact = await contactsModel.updateContact(
-        req.params.id,
-        req.body
+      const { id } = req.params;
+      const updatedContact = await contactsModel.findByIdAndUpdate(
+        id,
+        {
+          $set: req.body,
+        },
+        {
+          new: true,
+        }
       );
+      console.log(updatedContact);
 
       if (!updatedContact) {
         return res.status(404).json({ message: "Not Found" });
       }
 
-      return res.status(200).json(updatedContact);
+      return res.status(204).json(updatedContact);
     } catch (err) {
       return this.errorHandler(res, err);
     }
   };
+  //работате удаление контакта
   deleteContact = async (req, res, next) => {
     try {
-      const deleteStatus = await contactsModel.removeContact(req.params.id);
+      const { id } = req.params;
+      const deleteStatus = await contactsModel.findByIdAndDelete(id);
 
       if (!deleteStatus) {
         return res.status(404).json({ message: "Not found" });
@@ -69,9 +79,10 @@ class ContactsController {
       return this.errorHandler(res, err);
     }
   };
+
   validateUpdateContact = async (req, res, next) => {
     try {
-      if (!Object.keys(req.body).length) {
+      if (req.body.length) {
         throw new Error("missing fields");
       }
 
@@ -94,6 +105,9 @@ class ContactsController {
         name: Joi.string().required(),
         email: Joi.string().required(),
         phone: Joi.string().required(),
+        subscription: Joi.string().required(),
+        password: Joi.string().required(),
+        token: Joi.string().required(),
       });
 
       await schema.validateAsync(req.body);
