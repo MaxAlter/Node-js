@@ -12,7 +12,6 @@
 
 # dotenv environment variables file
 .env
-.env.test
 
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
