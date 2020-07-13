@@ -2,9 +2,11 @@ const express = require("express");
 const cors = require("cors");
 const morgan = require("morgan");
 const contactsRoters = require("./API/ContactsRoutes");
+const mongoose = require("mongoose");
 require("dotenv").config();
 
 const PORT = process.env.PORT;
+const BASE_URL_BD = process.env.BASE_URL_BD;
 
 class Server {
   constructor() {
@@ -22,7 +24,7 @@ class Server {
   }
 
   initRoutes() {
-    this.server.use("/api", contactsRoters);
+    this.server.use("/contacts", contactsRoters);
   }
 
   startListening() {
@@ -31,11 +33,25 @@ class Server {
     });
   }
 
-  start() {
+  async initDataBase() {
+    try {
+      await mongoose.connect(BASE_URL_BD, {
+        useNewUrlParser: true,
+        useUnifiedTopology: true,
+      });
+      console.log("Database connection successful");
+    } catch (error) {
+      console.log("Connecting error:", error.message);
+      process.exit(1);
+    }
+  }
+
+  async start() {
     this.initServer();
     this.initMiddlewares();
     this.initRoutes();
     this.startListening();
+    await this.initDataBase();
   }
 }
 
