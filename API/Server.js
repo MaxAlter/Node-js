@@ -1,8 +1,10 @@
 const express = require("express");
 const cors = require("cors");
 const morgan = require("morgan");
-const contactsRoters = require("./API/ContactsRoutes");
 const mongoose = require("mongoose");
+const contactsRouters = require("./Contacts/ContactsRoutes");
+const usersRouter = require("./Users/users.router");
+
 require("dotenv").config();
 
 const PORT = process.env.PORT;
@@ -24,7 +26,8 @@ class Server {
   }
 
   initRoutes() {
-    this.server.use("/contacts", contactsRoters);
+    this.server.use("/contacts", contactsRouters);
+    this.server.use("/", usersRouter);
   }
 
   startListening() {

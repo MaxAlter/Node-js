@@ -2,7 +2,7 @@ const Joi = require("@hapi/joi");
 const {
   Types: { ObjectId },
 } = require("mongoose");
-const contactsModel = require("../Model/ContactsModel");
+const contactsModel = require("./ContactsModel");
 
 class ContactsController {
   //работатет получение всех контактов
