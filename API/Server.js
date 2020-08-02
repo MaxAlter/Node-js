@@ -1,8 +1,9 @@
 const express = require("express");
 const cors = require("cors");
-const morgan = require("morgan");
-const contactsRoters = require("./API/ContactsRoutes");
 const mongoose = require("mongoose");
+const contactsRouters = require("./Contacts/ContactsRoutes");
+const usersRouter = require("./Users/UsersRouter");
+
 require("dotenv").config();
 
 const PORT = process.env.PORT;
@@ -14,17 +15,15 @@ class Server {
   }
   initMiddlewares() {
     this.server.use(express.json());
-    this.server.use(cors({ origin: "http://localhost:3000" }));
-    this.server.use(
-      morgan(":method :url :status :res[content-length] - :response-time ms")
-    );
+    this.server.use(cors());
   }
   initServer() {
     this.server = express();
   }
 
   initRoutes() {
-    this.server.use("/contacts", contactsRoters);
+    this.server.use("/contacts", contactsRouters);
+    this.server.use("/", usersRouter);
   }
 
   startListening() {
