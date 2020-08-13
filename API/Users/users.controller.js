@@ -1,4 +1,11 @@
 const Joi = require("@hapi/joi");
+const fs = require("fs");
+const path = require("path");
+const { promises: fsPromises } = fs;
+const Avatar = require("avatar-builder");
+const imagemin = require("imagemin");
+const imageminJpegtran = require("imagemin-jpegtran");
+const imageminPngquant = require("imagemin-pngquant");
 const bcryptjs = require("bcryptjs");
 const usersModel = require("./users.model");
 const jwt = require("jsonwebtoken");
@@ -7,7 +14,7 @@ require("dotenv").config();
 
 class usersController {
   constructor() {
-    this._costFactor = 4;
+    this._costFactor = 6;
   }
 
   get registerNewUsers() {
@@ -16,28 +23,38 @@ class usersController {
   get getCurrentUser() {
     return this._getCurrentUser.bind(this);
   }
-
+  //
   async _getCurrentUser(req, res, next) {
     try {
       const user = req.user;
-      return res.json({ email: user.email, subscription: user.subscription });
+      return res.json({
+        email: user.email,
+        subscription: user.subscription,
+        avatarURL: user.avatarURL,
+      });
     } catch (e) {
       res.status(500).json({ message: e.message });
     }
   }
-  // регистраия нового юзера
+
   async _registerNewUsers(req, res, next) {
     try {
+      const avatar = await Avatar.male8bitBuilder(128);
+      const buff = await avatar.create("gabriel");
+      const fileName = Date.now() + ".png";
+      const fileLink = `public/images/${fileName}`;
+      await fsPromises.writeFile(fileLink, buff);
       const { email, password, subscription, token } = req.body;
 
-      const existingUser = await usersModel.findUserByEmail(email);
-      if (existingUser) {
+      const existUser = await usersModel.findUserByEmail(email);
+      if (existUser) {
         return res.status(409).send("Email in use");
       }
 
       const passwordHash = await bcryptjs.hash(password, this._costFactor);
       const newUser = await usersModel.create({
         email,
+        avatarURL: `public/images/${fileName}`,
         password: passwordHash,
         subscription,
         token,
@@ -45,6 +62,7 @@ class usersController {
 
       return res.status(201).json({
         id: newUser._id,
+        avatarURL: newUser.avatarURL,
         name: newUser.name,
         email: newUser.email,
       });
@@ -67,7 +85,8 @@ class usersController {
     try {
       const { email, password } = req.body;
 
-      const user = await userModel.findUserByEmail(email);
+      const user = await usersModel.findUserByEmail(email);
+      console.log(user);
       if (!user) {
         return res.status(401).send("Email or password is wrong");
       }
@@ -81,10 +100,10 @@ class usersController {
         { id: user._id },
         process.env.JWT_SECRETKEY,
         {
-          expiresIn: "30 days",
+          expiresIn: "100 days",
         }
       );
-      await userModel.updateToken(user._id, token);
+      await usersModel.updateToken(user._id, token);
       return res.status(200).json({ token });
     } catch (err) {
       next(err);
@@ -117,13 +136,18 @@ class usersController {
       console.log(err);
     }
   }
+  //получить данные юзера по токену
   async _getCurrentUser(req, res) {
     try {
       const { user } = req;
 
       res
         .status(200)
-        .send({ email: user.email, subscription: user.subscription });
+        .send({
+          email: user.email,
+          subscription: user.subscription,
+          avatarURL: user.avatarURL,
+        });
     } catch (err) {
       res.status(400).send(err.message);
     }
@@ -131,18 +155,19 @@ class usersController {
   // валидация Аутентификации
   async validateSignIn(req, res, next) {
     try {
-      const signInRules = Joi.object({
+      const schema = Joi.object({
         email: Joi.string().required(),
         password: Joi.string().required(),
       });
 
-      const result = await Joi.validate(req.body, signInRules);
+      await schema.validateAsync(req.body);
 
       next();
     } catch (err) {
       res.status(400).json({ message: "missing required field" });
     }
   }
+  // валидация нового юзера
   async validateRegisterNewUsers(req, res, next) {
     try {
       const createUserRules = Joi.object({
@@ -157,6 +182,7 @@ class usersController {
       res.status(400).json({ message: "missing required field" });
     }
   }
+  // редактирование юзера по id
   async updateUser(req, res, next) {
     try {
       const user = req.user;
@@ -185,6 +211,51 @@ class usersController {
       next();
     } catch (err) {
       res.status(400).json({ message: "Value must be on of free/pro/premium" });
+    }
+  }
+  async updateUserAvatar(req, res, next) {
+    try {
+      const user = req.user;
+
+      const userAvatar = await usersModel.findById(user._id);
+      try {
+        await fsPromises.unlink(userAvatar.avatarURL);
+      } catch (error) {
+        console.log(error.message);
+      }
+
+      const updatedUser = await usersModel.findUserByIdAndUpdate(user._id, {
+        avatarURL: req.file.path,
+      });
+
+      if (!updatedUser) {
+        return res.status(404).json("Not Found contact");
+      }
+
+      return res.status(200).json({ avatarURL: updatedUser.avatarURL });
+    } catch (err) {
+      next(err);
+    }
+  }
+  async minifyImage(req, res, next) {
+    try {
+      await imagemin([req.file.path], {
+        destination: "public/images",
+        plugins: [
+          imageminJpegtran(),
+          imageminPngquant({
+            quality: [0.6, 0.8],
+          }),
+        ],
+      });
+
+      await fsPromises.unlink(req.file.path);
+
+      req.file.path = path.join("public/images", req.file.filename);
+      req.file.destination = "public/images";
+      next();
+    } catch (err) {
+      res.status(400).json({ message: "Value must be file photo" });
     }
   }
 }

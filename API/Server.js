@@ -6,7 +6,7 @@ const usersRouter = require("./Users/UsersRouter");
 
 require("dotenv").config();
 
-const PORT = process.env.PORT;
+const PORT = process.env.PORT || 8080;
 const BASE_URL_BD = process.env.BASE_URL_BD;
 
 class Server {
@@ -15,6 +15,8 @@ class Server {
   }
   initMiddlewares() {
     this.server.use(express.json());
+    this.server.use(express.static("public"));
+    this.server.use(express.static("tmp"));
     this.server.use(cors());
   }
   initServer() {
