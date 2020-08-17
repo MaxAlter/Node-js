@@ -6,6 +6,14 @@ const usersSchema = new Schema({
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
   avatarURL: { type: String },
+  verify: {
+    type: Boolean,
+    default: false,
+  },
+  verifyToken: {
+    type: String,
+    required: [true, "Verify token"],
+  },
   subscription: {
     type: String,
     enum: ["free", "pro", "premium"],
@@ -14,9 +22,9 @@ const usersSchema = new Schema({
   token: String,
 });
 
-usersSchema.statics.findUserByIdAndUpdate = findUserByIdAndUpdate;
-usersSchema.statics.findUserByEmail = findUserByEmail;
 usersSchema.statics.updateToken = updateToken;
+usersSchema.statics.findUserByEmail = findUserByEmail;
+usersSchema.statics.findUserByIdAndUpdate = findUserByIdAndUpdate;
 
 async function updateToken(id, newToken) {
   return this.findByIdAndUpdate(id, { token: newToken });

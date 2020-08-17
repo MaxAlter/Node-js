@@ -51,4 +51,7 @@ usersRouter.patch(
   // usersController.minifyImage,
   usersController.updateUserAvatar
 );
+
+usersRouter.get("/verify/:token", usersController.verificationToken);
+
 module.exports = usersRouter;
