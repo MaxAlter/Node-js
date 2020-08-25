@@ -1,6 +1,8 @@
 const Joi = require("@hapi/joi");
+// const { nanoid } = require("nanoid"); не работает выдает ошибу не правильного import
 const fs = require("fs");
 const path = require("path");
+const shortid = require("shortid");
 const { promises: fsPromises } = fs;
 const Avatar = require("avatar-builder");
 const imagemin = require("imagemin");
@@ -9,6 +11,8 @@ const imageminPngquant = require("imagemin-pngquant");
 const bcryptjs = require("bcryptjs");
 const usersModel = require("./users.model");
 const jwt = require("jsonwebtoken");
+const sgMail = require("@sendgrid/mail");
+const Mailgen = require("mailgen");
 
 require("dotenv").config();
 
@@ -22,6 +26,9 @@ class usersController {
   }
   get getCurrentUser() {
     return this._getCurrentUser.bind(this);
+  }
+  get sendVerificationEmail() {
+    return this._sendVerificationEmail.bind(this);
   }
   //
   async _getCurrentUser(req, res, next) {
@@ -44,6 +51,7 @@ class usersController {
       const fileName = Date.now() + ".png";
       const fileLink = `public/images/${fileName}`;
       await fsPromises.writeFile(fileLink, buff);
+
       const { email, password, subscription, token } = req.body;
 
       const existUser = await usersModel.findUserByEmail(email);
@@ -52,11 +60,20 @@ class usersController {
       }
 
       const passwordHash = await bcryptjs.hash(password, this._costFactor);
+
+      const verifyToken = shortid.generate();
+      const option = {
+        verifyToken,
+        email,
+      };
+      await this.sendVerificationEmail(option);
+
       const newUser = await usersModel.create({
         email,
         avatarURL: `public/images/${fileName}`,
         password: passwordHash,
         subscription,
+        verifyToken,
         token,
       });
 
@@ -141,13 +158,11 @@ class usersController {
     try {
       const { user } = req;
 
-      res
-        .status(200)
-        .send({
-          email: user.email,
-          subscription: user.subscription,
-          avatarURL: user.avatarURL,
-        });
+      res.status(200).send({
+        email: user.email,
+        subscription: user.subscription,
+        avatarURL: user.avatarURL,
+      });
     } catch (err) {
       res.status(400).send(err.message);
     }
@@ -257,6 +272,59 @@ class usersController {
     } catch (err) {
       res.status(400).json({ message: "Value must be file photo" });
     }
+  }
+
+  async _sendVerificationEmail({ verifyToken, email }) {
+    const mailGenerator = new Mailgen({
+      theme: "default",
+      product: {
+        name: "GOiT HW-6",
+        link: "http://localhost:3000/",
+      },
+    });
+    const template = {
+      body: {
+        intro: "Welcome to my HW-6",
+        action: {
+          instructions: "please click here:",
+          button: {
+            color: "#22BC66",
+            text: "Verify your account",
+            link: `http://localhost:3000/verify/${verifyToken}`,
+          },
+        },
+      },
+    };
+    const emailBody = mailGenerator.generate(template);
+    sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+    const msg = {
+      to: "alter0075926@gmail.com",
+      from: "alter0075926@gmail.com", // Use the email address or domain you verified above
+      subject: "Sending with Twilio SendGrid is Fun",
+      text: "verify account",
+      html: emailBody,
+    };
+    await sgMail.send(msg).then(
+      () => {},
+      (error) => {
+        console.error(error);
+
+        if (error.res) {
+          console.error(error.res.body);
+        }
+      }
+    );
+  }
+  async verificationToken(req, res, next) {
+    const { token } = req.params;
+    const user = await usersModel.findOne({ verifyToken: token });
+    if (!user) {
+      return res.status(404).json({
+        message: "Your verification token is not valid",
+      });
+    }
+    await user.updateOne({ verify: true, verifyToken: null });
+    res.status(200).json({ message: "verification successful" });
   }
 }
 
